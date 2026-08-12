@@ -1,0 +1,95 @@
+$kind: http-request
+name: Create Report
+method: POST
+url: '{{baseUrl}}/api/reports'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "reportId": "RPT-001",
+      "title": "Pothole on Main Street",
+      "description": "Large pothole causing traffic hazard near the intersection",
+      "category": "Road Damage",
+      "photoUrl": "https://example.com/photos/pothole.jpg",
+      "location": {
+        "lat": 40.7128,
+        "lng": -74.0060
+      },
+      "status": "pending"
+    }
+events:
+  - listen: test
+    script:
+      type: text/javascript
+      exec: |-
+        pm.test("Status code is 201 Created", function () {
+          pm.response.to.have.status(201);
+        });
+
+        pm.test("Response time is under 1000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1000);
+        });
+
+        pm.test("Response has success: true", function () {
+          const json = pm.response.json();
+          pm.expect(json.success).to.be.true;
+        });
+
+        pm.test("Response has data object", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("object");
+        });
+
+        pm.test("Created report has all required fields", function () {
+          const data = pm.response.json().data;
+          pm.expect(data).to.have.property("reportId");
+          pm.expect(data).to.have.property("title");
+          pm.expect(data).to.have.property("description");
+          pm.expect(data).to.have.property("category");
+          pm.expect(data).to.have.property("photoUrl");
+          pm.expect(data).to.have.property("location");
+          pm.expect(data).to.have.property("status");
+        });
+
+        pm.test("Created report matches submitted data", function () {
+          const data = pm.response.json().data;
+          const body = JSON.parse(pm.request.body.raw);
+          pm.expect(data.reportId).to.equal(body.reportId);
+          pm.expect(data.title).to.equal(body.title);
+          pm.expect(data.description).to.equal(body.description);
+          pm.expect(data.category).to.equal(body.category);
+          pm.expect(data.photoUrl).to.equal(body.photoUrl);
+        });
+
+        pm.test("Created report has default status 'pending' if not specified", function () {
+          const data = pm.response.json().data;
+          pm.expect(data.status).to.equal("pending");
+        });
+
+        pm.test("Created report has MongoDB _id", function () {
+          const data = pm.response.json().data;
+          pm.expect(data).to.have.property("_id");
+        });
+
+        pm.test("Created report has timestamps", function () {
+          const data = pm.response.json().data;
+          pm.expect(data).to.have.property("createdAt");
+          pm.expect(data).to.have.property("updatedAt");
+        });
+
+        pm.test("Location lat and lng are numbers", function () {
+          const data = pm.response.json().data;
+          pm.expect(data.location.lat).to.be.a("number");
+          pm.expect(data.location.lng).to.be.a("number");
+        });
+
+        // Save the created report ID for use in other requests
+        const json = pm.response.json();
+        if (json.success && json.data && json.data._id) {
+          pm.collectionVariables.set("lastCreatedReportId", json.data._id);
+        }

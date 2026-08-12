@@ -1,0 +1,68 @@
+$kind: http-request
+name: Get All Reports
+method: GET
+url: '{{baseUrl}}/api/reports'
+order: 2000
+events:
+  - listen: test
+    script:
+      type: text/javascript
+      exec: |-
+        pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+        });
+
+        pm.test("Response time is under 1000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1000);
+        });
+
+        pm.test("Response has success: true", function () {
+          const json = pm.response.json();
+          pm.expect(json.success).to.be.true;
+        });
+
+        pm.test("Response has data array", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("array");
+        });
+
+        pm.test("Each report has required fields", function () {
+          const json = pm.response.json();
+          json.data.forEach(function (report) {
+            pm.expect(report).to.have.property("reportId");
+            pm.expect(report).to.have.property("title");
+            pm.expect(report).to.have.property("description");
+            pm.expect(report).to.have.property("category");
+            pm.expect(report).to.have.property("photoUrl");
+            pm.expect(report).to.have.property("location");
+            pm.expect(report).to.have.property("status");
+          });
+        });
+
+        pm.test("Each report location has lat and lng", function () {
+          const json = pm.response.json();
+          json.data.forEach(function (report) {
+            pm.expect(report.location).to.have.property("lat");
+            pm.expect(report.location).to.have.property("lng");
+          });
+        });
+
+        pm.test("Each report status is a valid enum value", function () {
+          const json = pm.response.json();
+          const validStatuses = ["pending", "in_progress", "resolved", "rejected"];
+          json.data.forEach(function (report) {
+            pm.expect(validStatuses).to.include(report.status);
+          });
+        });
+
+        pm.test("Reports are sorted newest first (createdAt descending)", function () {
+          const json = pm.response.json();
+          if (json.data.length > 1) {
+            for (let i = 0; i < json.data.length - 1; i++) {
+              const current = new Date(json.data[i].createdAt).getTime();
+              const next = new Date(json.data[i + 1].createdAt).getTime();
+              pm.expect(current).to.be.at.least(next);
+            }
+          }
+        });

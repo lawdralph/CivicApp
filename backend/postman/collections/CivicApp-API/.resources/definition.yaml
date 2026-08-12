@@ -1,0 +1,7 @@
+$kind: collection
+name: CivicApp API
+description: API collection for CivicApp backend - civic issue reporting system
+variables:
+  - key: baseUrl
+    value: 'http://localhost:3000'
+    type: string
