@@ -4,7 +4,7 @@ import axios from 'axios'
 
 function AdminLogin() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ email: 'admin@civicapp.com', password: 'Admin' })
+  const [form, setForm] = useState({ email: 'admin@civicapp.gov', password: 'Admin@123' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
