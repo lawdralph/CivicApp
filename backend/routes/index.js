@@ -6,13 +6,8 @@ const { loginAdmin, getAdminProfile } = require('../controllers/authController')
 const auth = require('../middleware/auth');
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
-  filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/\s+/g, '-');
-    cb(null, `${Date.now()}-${safeName}`);
-  },
-});
+// Use memory storage and let the controller upload to S3 for persistence
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,

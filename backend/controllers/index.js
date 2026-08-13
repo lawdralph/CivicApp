@@ -1,5 +1,14 @@
 const { Report } = require('../models');
 const mongoose = require('mongoose');
+const AWS = require('aws-sdk');
+
+const S3_BUCKET = process.env.S3_BUCKET;
+const AWS_REGION = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
+let s3Client = null;
+if (S3_BUCKET && AWS_REGION) {
+  AWS.config.update({ region: AWS_REGION });
+  s3Client = new AWS.S3();
+}
 
 const normalizeStatus = (value) => {
   const raw = String(value || '').trim().toLowerCase();
@@ -32,6 +41,24 @@ exports.createReport = async (req, res) => {
     const location = buildLocation(req);
     const reportId = req.body.reportId || `CIV-${Date.now()}`;
 
+    let photoUrl = req.body.photoUrl || '';
+    if (req.file) {
+      if (!s3Client || !S3_BUCKET || !AWS_REGION) {
+        return res.status(500).json({ success: false, message: 'File uploads not configured. Set S3_BUCKET and AWS_REGION.' });
+      }
+
+      const key = `reports/${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
+      await s3Client.putObject({
+        Bucket: S3_BUCKET,
+        Key: key,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+        ACL: 'public-read',
+      }).promise();
+
+      photoUrl = `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
+    }
+
     const payload = {
       reportId,
       title: req.body.title,
@@ -39,7 +66,7 @@ exports.createReport = async (req, res) => {
       category: req.body.category,
       status: normalizeStatus(req.body.status || 'pending'),
       location,
-      photoUrl: req.file ? `/uploads/${req.file.filename}` : (req.body.photoUrl || ''),
+      photoUrl,
     };
 
     if (!payload.title || !payload.description || !payload.category || !payload.location || !payload.location.lat || !payload.location.lng) {
