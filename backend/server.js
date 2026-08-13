@@ -15,8 +15,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const requestLogger = require('./middleware/requestLogger');
 app.use(requestLogger);
 
-app.use('/', routes);
-
 // Serve frontend static build if present (single-service deployment)
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
 if (fs.existsSync(frontendDist)) {
@@ -28,6 +26,8 @@ if (fs.existsSync(frontendDist)) {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }
+
+app.use('/', routes);
 
 mongoose.connect(config.mongodbUri)
   .then(() => {
