@@ -29,7 +29,7 @@ const reportSchema = new mongoose.Schema({
   },
   photoUrl: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     default: '',
   },

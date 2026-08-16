@@ -2,11 +2,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const config = require('./config');
 const routes = require('./routes');
 
 const app = express();
 const port = config.port;
+let memoryServer = null;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -29,14 +31,45 @@ if (fs.existsSync(frontendDist)) {
 
 app.use('/', routes);
 
-mongoose.connect(config.mongodbUri)
-  .then(() => {
+const connectDatabase = async () => {
+  const mongoUri = config.mongodbUri;
+
+  if (!mongoUri) {
+    memoryServer = await MongoMemoryServer.create();
+    await mongoose.connect(memoryServer.getUri());
+    console.log('Connected to in-memory MongoDB for local development');
+    return;
+  }
+
+  try {
+    await mongoose.connect(mongoUri);
     console.log('MongoDB connected successfully');
+  } catch (error) {
+    console.warn('MongoDB connection failed, falling back to in-memory database:', error.message);
+    memoryServer = await MongoMemoryServer.create();
+    await mongoose.connect(memoryServer.getUri());
+    console.log('Connected to in-memory MongoDB fallback');
+  }
+};
+
+connectDatabase()
+  .then(() => {
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);
     });
   })
   .catch((error) => {
-    console.error('MongoDB connection failed:', error.message);
+    console.error('Database startup failed:', error.message);
     process.exit(1);
   });
+
+process.on('SIGINT', async () => {
+  try {
+    await mongoose.disconnect();
+    if (memoryServer) {
+      await memoryServer.stop();
+    }
+  } finally {
+    process.exit(0);
+  }
+});

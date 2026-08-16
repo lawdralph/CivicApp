@@ -1,6 +1,8 @@
 const { Report } = require('../models');
 const mongoose = require('mongoose');
 const AWS = require('aws-sdk');
+const fs = require('fs');
+const path = require('path');
 
 const S3_BUCKET = process.env.S3_BUCKET;
 const AWS_REGION = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
@@ -43,20 +45,26 @@ exports.createReport = async (req, res) => {
 
     let photoUrl = req.body.photoUrl || '';
     if (req.file) {
-      if (!s3Client || !S3_BUCKET || !AWS_REGION) {
-        return res.status(500).json({ success: false, message: 'File uploads not configured. Set S3_BUCKET and AWS_REGION.' });
+      if (s3Client && S3_BUCKET && AWS_REGION) {
+        const key = `reports/${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
+        await s3Client.putObject({
+          Bucket: S3_BUCKET,
+          Key: key,
+          Body: req.file.buffer,
+          ContentType: req.file.mimetype,
+          ACL: 'public-read',
+        }).promise();
+
+        photoUrl = `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
+      } else {
+        const uploadDir = path.join(__dirname, '..', 'uploads');
+        fs.mkdirSync(uploadDir, { recursive: true });
+
+        const safeFileName = `${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
+        const uploadPath = path.join(uploadDir, safeFileName);
+        fs.writeFileSync(uploadPath, req.file.buffer);
+        photoUrl = `/uploads/${safeFileName}`;
       }
-
-      const key = `reports/${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
-      await s3Client.putObject({
-        Bucket: S3_BUCKET,
-        Key: key,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype,
-        ACL: 'public-read',
-      }).promise();
-
-      photoUrl = `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
     }
 
     const payload = {
