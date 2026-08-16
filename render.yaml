@@ -33,3 +33,6 @@ services:
     branch: main
     buildCommand: npm install --prefix frontend && npm run build --prefix frontend
     publishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://civicapp-backend.onrender.com
