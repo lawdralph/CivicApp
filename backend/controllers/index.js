@@ -45,18 +45,7 @@ exports.createReport = async (req, res) => {
 
     let photoUrl = req.body.photoUrl || '';
     if (req.file) {
-      if (s3Client && S3_BUCKET && AWS_REGION) {
-        const key = `reports/${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
-        await s3Client.putObject({
-          Bucket: S3_BUCKET,
-          Key: key,
-          Body: req.file.buffer,
-          ContentType: req.file.mimetype,
-          ACL: 'public-read',
-        }).promise();
-
-        photoUrl = `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
-      } else {
+      const saveLocally = () => {
         const uploadDir = path.join(__dirname, '..', 'uploads');
         fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -64,6 +53,26 @@ exports.createReport = async (req, res) => {
         const uploadPath = path.join(uploadDir, safeFileName);
         fs.writeFileSync(uploadPath, req.file.buffer);
         photoUrl = `/uploads/${safeFileName}`;
+      };
+
+      if (s3Client && S3_BUCKET && AWS_REGION) {
+        try {
+          const key = `reports/${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
+          await s3Client.putObject({
+            Bucket: S3_BUCKET,
+            Key: key,
+            Body: req.file.buffer,
+            ContentType: req.file.mimetype,
+            ACL: 'public-read',
+          }).promise();
+
+          photoUrl = `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
+        } catch (s3Error) {
+          console.warn('S3 upload failed, falling back to local upload storage:', s3Error.message);
+          saveLocally();
+        }
+      } else {
+        saveLocally();
       }
     }
 
