@@ -76,7 +76,8 @@ function ReportIssue() {
       }
       navigate('/report/success', { state: { report: response } })
     } catch (error) {
-      setSubmitError('Something went wrong. Please try again.')
+      const backendMessage = error?.response?.data?.message || error?.message || 'Something went wrong. Please try again.'
+      setSubmitError(backendMessage)
     } finally {
       setIsSubmitting(false)
     }
