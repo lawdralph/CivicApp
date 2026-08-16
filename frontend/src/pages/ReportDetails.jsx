@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Button from '../components/Button'
 import StatusBadge from '../components/StatusBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -11,6 +11,7 @@ const statuses = ['Pending', 'Under Review', 'In Progress', 'Resolved']
 
 function ReportDetails() {
   const { reportId } = useParams()
+  const navigate = useNavigate()
   const [report, setReport] = useState(null)
   const [status, setStatus] = useState('Pending')
   const [loading, setLoading] = useState(true)
@@ -57,8 +58,16 @@ function ReportDetails() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
+            <Button
+              variant="secondary"
+              className="mb-4 inline-flex items-center gap-2"
+              onClick={() => navigate('/admin')}
+              type="button"
+            >
+              ← Back to management
+            </Button>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Report details</p>
             <h1 className="mt-2 text-3xl font-bold text-slate-900">{report.title}</h1>
           </div>
